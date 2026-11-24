@@ -1,18 +1,23 @@
+
 #include <stdio.h>
 #include <string.h>
+#include "ranking.h"
 
+// Mostra a vida e o folego do jogador
 void mostrarStatus_jogador(int vida, int folego, const char nome[])
 {
     printf("\nStatus do jogador: %s | Vida: %d | Folego: %d\n",
            nome, vida, folego);
 }
 
+// Mostra a vida e o folego da CPU
 void mostrarStatus_cpu(int vida, int folego, const char nome[])
 {
     printf("Status da CPU: %s | Vida: %d | Folego: %d\n",
            nome, vida, folego);
 }
 
+// Define os valores de dano de cada golpe
 void valores_Golpes(int *jab, int *direto, int *gancho, int *cruzado)
 {
     *jab = 10;
@@ -25,36 +30,35 @@ void valores_Golpes(int *jab, int *direto, int *gancho, int *cruzado)
            *jab, *direto, *gancho, *cruzado);
 }
 
-void lutar(int jab, int direto, int gancho, int cruzado, int *vida_cpu)
+// Funcao recursiva responsavel pelo combate
+int lutar(int jab, int direto, int gancho, int cruzado,
+          int *vida_cpu, int *pontuacao, int *quantidade_golpes)
 {
-    // Caso base: encerra a recursao quando a CPU fica sem vida.
+    // Caso base: encerra a luta quando a CPU perde toda a vida
     if (*vida_cpu <= 0)
     {
         printf("\nNocaute! Voce venceu a luta!\n");
-        return;
+        return 1;
     }
 
-    char golpe[10];
+    char golpe[32];
     int dano = 0;
 
-    // Repete a leitura localmente enquanto o golpe for invalido.
-    // Assim, entradas invalidas nao criam novas chamadas recursivas.
+    // Pede um golpe ate receber uma opcao valida
     while (dano == 0)
     {
         printf("\nDigite o golpe (jab, direto, gancho, cruzado): ");
 
-        if (scanf("%9s", golpe) != 1)
+        if (fgets(golpe, sizeof(golpe), stdin) == NULL)
         {
             printf("\nEntrada encerrada. Luta interrompida.\n");
-            return;
+            return 0;
         }
 
-        // Descarta caracteres restantes da linha.
-        int caractere;
-        while ((caractere = getchar()) != '\n' && caractere != EOF)
-        {
-        }
+        // Remove a quebra de linha do texto digitado
+        golpe[strcspn(golpe, "\n")] = '\0';
 
+        // Verifica qual golpe foi escolhido
         if (strcmp(golpe, "jab") == 0)
         {
             dano = jab;
@@ -73,49 +77,147 @@ void lutar(int jab, int direto, int gancho, int cruzado, int *vida_cpu)
         }
         else
         {
-            printf("Golpe invalido! Digite uma das opcoes.\n");
+            printf("Golpe invalido! Tente novamente.\n");
         }
     }
 
-    // Atualiza a vida original, usando o ponteiro.
+    // Subtrai o dano da vida da CPU
     *vida_cpu = *vida_cpu - dano;
 
-    // Evita exibir uma vida negativa.
+    // Evita que a vida fique negativa
     if (*vida_cpu < 0)
     {
         *vida_cpu = 0;
     }
 
-    printf("Voce usou %s e causou %d de dano! Vida da CPU: %d\n",
-           golpe, dano, *vida_cpu);
+    // Soma os pontos obtidos com o golpe
+    *pontuacao = *pontuacao + dano;
 
-    // Passo recursivo: inicia outro turno com a vida atualizada.
-    lutar(jab, direto, gancho, cruzado, vida_cpu);
+    // Conta quantos golpes foram utilizados
+    *quantidade_golpes = *quantidade_golpes + 1;
+
+    printf("Voce usou %s e causou %d de dano!\n",
+           golpe, dano);
+
+    printf("Vida da CPU: %d | Pontuacao atual: %d\n",
+           *vida_cpu, *pontuacao);
+
+    // Chama a mesma funcao para o proximo turno
+    return lutar(jab, direto, gancho, cruzado,
+                 vida_cpu, pontuacao, quantidade_golpes);
 }
 
 int main(void)
 {
-    const char nome_jogador[] = "Gervonta Davis";
-    int vida_jogador = 100;
-    int folego_jogador = 100;
+    // Cria a lista inicialmente vazia
+    Jogador *ranking = NULL;
 
-    const char nome_cpu[] = "Canelo Alvarez";
-    int vida_cpu = 100;
-    int folego_cpu = 100;
+    char nome_jogador[50];
+    char resposta[16];
 
+    // Guarda os valores dos golpes
     int valor_jab, valor_direto, valor_gancho, valor_cruzado;
 
-    mostrarStatus_jogador(vida_jogador, folego_jogador, nome_jogador);
-    mostrarStatus_cpu(vida_cpu, folego_cpu, nome_cpu);
+    // Mantem o jogo funcionando enquanto o jogador quiser
+    do
+    {
+        int vida_jogador = 100;
+        int folego_jogador = 100;
 
-    valores_Golpes(&valor_jab, &valor_direto,
-                  &valor_gancho, &valor_cruzado);
+        const char nome_cpu[] = "Canelo Alvarez";
+        int vida_cpu = 100;
+        int folego_cpu = 100;
 
-    lutar(valor_jab, valor_direto, valor_gancho,
-          valor_cruzado, &vida_cpu);
+        int pontuacao = 0;
+        int quantidade_golpes = 0;
 
-    printf("\nStatus final:\n");
-    mostrarStatus_cpu(vida_cpu, folego_cpu, nome_cpu);
+        printf("\n===== XADREZ DO RINGUE =====\n");
+
+        // Solicita o nome do jogador
+        printf("Digite o nome do jogador: ");
+
+        if (fgets(nome_jogador, sizeof(nome_jogador), stdin) == NULL)
+        {
+            break;
+        }
+
+        // Remove a quebra de linha do nome
+        nome_jogador[strcspn(nome_jogador, "\n")] = '\0';
+
+        // Verifica se o jogador digitou um nome
+        if (strlen(nome_jogador) == 0)
+        {
+            printf("Nome invalido. Tente novamente.\n");
+            continue;
+        }
+
+        // Mostra os dados iniciais da luta
+        mostrarStatus_jogador(vida_jogador, folego_jogador,
+                             nome_jogador);
+
+        mostrarStatus_cpu(vida_cpu, folego_cpu, nome_cpu);
+
+        // Define os danos dos golpes
+        valores_Golpes(&valor_jab, &valor_direto,
+                       &valor_gancho, &valor_cruzado);
+
+        // Inicia a luta e verifica se foi concluida
+        int venceu = lutar(valor_jab, valor_direto,
+                           valor_gancho, valor_cruzado,
+                           &vida_cpu, &pontuacao,
+                           &quantidade_golpes);
+
+        // Se a luta foi interrompida, encerra o jogo
+        if (!venceu)
+        {
+            break;
+        }
+
+        // Adiciona um bonus pela vitoria
+        pontuacao = pontuacao + 50;
+
+        // Calcula um bonus por utilizar menos golpes
+        int bonus = 50 - (quantidade_golpes * 5);
+
+        if (bonus < 0)
+        {
+            bonus = 0;
+        }
+
+        pontuacao = pontuacao + bonus;
+
+        printf("\n===== RESULTADO DA PARTIDA =====\n");
+        printf("Jogador: %s\n", nome_jogador);
+        printf("Golpes utilizados: %d\n", quantidade_golpes);
+        printf("Pontuacao final: %d\n", pontuacao);
+
+        // Cadastra a pontuacao na lista encadeada
+        if (!adicionarJogador(&ranking, nome_jogador, pontuacao))
+        {
+            printf("Nao foi possivel registrar a pontuacao.\n");
+        }
+
+        // Mostra o ranking atualizado
+        mostrarRanking(ranking);
+
+        // Pergunta se deseja iniciar outra partida
+        printf("\nDeseja jogar novamente? (s/n): ");
+
+        if (fgets(resposta, sizeof(resposta), stdin) == NULL)
+        {
+            break;
+        }
+
+    } while (resposta[0] == 's' || resposta[0] == 'S');
+
+    // Exibe o ranking final antes de encerrar
+    printf("\n===== RANKING FINAL =====\n");
+    mostrarRanking(ranking);
+
+    // Libera a memoria dos jogadores cadastrados
+    liberarRanking(&ranking);
+
+    printf("\nJogo encerrado!\n");
 
     return 0;
 }
