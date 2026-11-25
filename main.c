@@ -3,6 +3,42 @@
 #include <string.h>
 #include "ranking.h"
 
+typedef enum
+{
+    LEITURA_ENCERRADA,
+    LEITURA_OK,
+    LINHA_LONGA
+} ResultadoLeitura;
+
+// Descarta o restante de uma linha longa antes da proxima pergunta.
+static ResultadoLeitura lerLinha(char texto[], int capacidade)
+{
+    if (fgets(texto, capacidade, stdin) == NULL)
+    {
+        return LEITURA_ENCERRADA;
+    }
+
+    char *quebra = strchr(texto, '\n');
+    if (quebra != NULL)
+    {
+        *quebra = '\0';
+        return LEITURA_OK;
+    }
+
+    int caractere = getchar();
+    if (caractere == '\n' || caractere == EOF)
+    {
+        return LEITURA_OK;
+    }
+
+    do
+    {
+        caractere = getchar();
+    } while (caractere != '\n' && caractere != EOF);
+
+    return LINHA_LONGA;
+}
+
 // Mostra a vida e o folego do jogador
 void mostrarStatus_jogador(int vida, int folego, const char nome[])
 {
@@ -49,14 +85,18 @@ int lutar(int jab, int direto, int gancho, int cruzado,
     {
         printf("\nDigite o golpe (jab, direto, gancho, cruzado): ");
 
-        if (fgets(golpe, sizeof(golpe), stdin) == NULL)
+        ResultadoLeitura leitura = lerLinha(golpe, sizeof(golpe));
+        if (leitura == LEITURA_ENCERRADA)
         {
             printf("\nEntrada encerrada. Luta interrompida.\n");
             return 0;
         }
 
-        // Remove a quebra de linha do texto digitado
-        golpe[strcspn(golpe, "\n")] = '\0';
+        if (leitura == LINHA_LONGA)
+        {
+            printf("Golpe invalido! Tente novamente.\n");
+            continue;
+        }
 
         // Verifica qual golpe foi escolhido
         if (strcmp(golpe, "jab") == 0)
@@ -119,7 +159,7 @@ int main(void)
     int valor_jab, valor_direto, valor_gancho, valor_cruzado;
 
     // Mantem o jogo funcionando enquanto o jogador quiser
-    do
+    for (;;)
     {
         int vida_jogador = 100;
         int folego_jogador = 100;
@@ -136,16 +176,21 @@ int main(void)
         // Solicita o nome do jogador
         printf("Digite o nome do jogador: ");
 
-        if (fgets(nome_jogador, sizeof(nome_jogador), stdin) == NULL)
+        ResultadoLeitura leitura = lerLinha(nome_jogador, sizeof(nome_jogador));
+        if (leitura == LEITURA_ENCERRADA)
         {
             break;
         }
 
-        // Remove a quebra de linha do nome
-        nome_jogador[strcspn(nome_jogador, "\n")] = '\0';
+        if (leitura == LINHA_LONGA)
+        {
+            printf("Nome muito longo. Digite ate %d bytes.\n",
+                   (int)sizeof(nome_jogador) - 1);
+            continue;
+        }
 
         // Verifica se o jogador digitou um nome
-        if (strlen(nome_jogador) == 0)
+        if (nome_jogador[strspn(nome_jogador, " \t")] == '\0')
         {
             printf("Nome invalido. Tente novamente.\n");
             continue;
@@ -203,12 +248,13 @@ int main(void)
         // Pergunta se deseja iniciar outra partida
         printf("\nDeseja jogar novamente? (s/n): ");
 
-        if (fgets(resposta, sizeof(resposta), stdin) == NULL)
+        if (lerLinha(resposta, sizeof(resposta)) != LEITURA_OK ||
+            (resposta[0] != 's' && resposta[0] != 'S'))
         {
             break;
         }
 
-    } while (resposta[0] == 's' || resposta[0] == 'S');
+    }
 
     // Exibe o ranking final antes de encerrar
     printf("\n===== RANKING FINAL =====\n");

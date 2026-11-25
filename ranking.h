@@ -5,11 +5,13 @@
 // Estrutura que armazena os dados de cada jogador
 typedef struct Jogador
 {
-    char nome[50];
     int pontuacao;
 
     // Ponteiro que liga um jogador ao proximo da lista
     struct Jogador *prox;
+
+    // O espaco para o nome e reservado junto com o no.
+    char nome[];
 
 } Jogador;
 

@@ -7,47 +7,28 @@
 // Funcao para adicionar um jogador ao ranking
 int adicionarJogador(Jogador **lista, const char nome[], int pontuacao)
 {
-    // Reserva memoria para o novo jogador
-    Jogador *novo = malloc(sizeof(Jogador));
+    size_t tamanho_nome = strlen(nome) + 1;
+    Jogador *novo = malloc(sizeof *novo + tamanho_nome);
 
     // Verifica se a memoria foi alocada
     if (novo == NULL)
     {
-        printf("Erro ao alocar memoria para o jogador.\n");
         return 0;
     }
 
     // Copia o nome e salva a pontuacao
-    snprintf(novo->nome, sizeof(novo->nome), "%s", nome);
+    memcpy(novo->nome, nome, tamanho_nome);
     novo->pontuacao = pontuacao;
-    novo->prox = NULL;
 
-    // Se a lista estiver vazia ou o novo jogador
-    // tiver mais pontos, ele entra no inicio
-    if (*lista == NULL || pontuacao > (*lista)->pontuacao)
+    // Procura o elo onde o novo no entra, passando tambem pelos empates.
+    Jogador **elo = lista;
+    while (*elo != NULL && (*elo)->pontuacao >= pontuacao)
     {
-        novo->prox = *lista;
-        *lista = novo;
-    }
-    else
-    {
-        // Usa um ponteiro auxiliar para procurar a posicao
-        Jogador *auxiliar = *lista;
-
-        // Procura onde a pontuacao deve ser inserida
-        while (auxiliar->prox != NULL &&
-               auxiliar->prox->pontuacao >= pontuacao)
-        {
-            auxiliar = auxiliar->prox;
-        }
-
-        // Liga o novo jogador ao restante da lista
-        novo->prox = auxiliar->prox;
-
-        // Liga o jogador anterior ao novo jogador
-        auxiliar->prox = novo;
+        elo = &(*elo)->prox;
     }
 
+    novo->prox = *elo;
+    *elo = novo;
     return 1;
 }
 
